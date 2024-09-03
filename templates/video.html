@@ -1,54 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-</head>
-<body>
-    <div id="st">
-
+    {% load bootstrap5 %}
+    {% bootstrap_css %}
+    {% bootstrap_javascript %}
+  </head>
+  <body>
+    <div class="container">
+      <nav class="navbar navbar-expand-lg bg-body-tertiary">
+        <div class="container-fluid">
+          <a class="navbar-brand" href="#">Extractor</a>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+            <div class="navbar-nav">
+              <a class="nav-link active" aria-current="page" href="/">Home</a>
+              <a class="nav-link" href="/upload">Upload</a>
+              <a class="nav-link" href="/search">Search</a>
+            </div>
+          </div>
+        </div>
+      </nav>
         <video controls>
-        <source src={{s3_video}} type="video/mp4">
-            <track
-            label="English"
-            kind="subtitles"
-            srclang="en"
-            src={{s3_subtitle}}
-            default />
-            Your browser does not support the video tag.
-        </video> <br>
-        <form onsubmit="doSomething(event); return false;">
-          <input type="text" id="search" placeholder="Search something">
-          <button>Search</button>
-        </form>
-
-    </div>
-    </body>
- <script>
-  async function doSomething(e) {
-    e.preventDefault();
+          <source src="{{s3_video}}" type="video/mp4">
+          <track id="subtitleTrack" label="English" kind="subtitles" srclang="en" src="{{s3_subtitle}}" default>
+        </video> 
+        <br>
+        <div class="mb-3">
+          <label for="exampleInputEmail1" class="form-label">Search subtitle time</label>
+          <input type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="search">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="doSomething()">Search</button>
+        <div id="value"></div>
+      </div>
+      {{ subtitle|json_script:"subtitle-data" }}
+  </body>
+  <script>
+  async function doSomething() {
     try {
-      subtitle = {{subtitle}}
-      json = JSON.parse(subtitle)
-      const input = document.getElementById("search")
-      const str = input.value.toUpperCase().trim()
-      var present = false
-      for (let i = 0; i < json.length; i++) {
-        for (let j = 0; j < json[i].lines.length; j++) {
-          if (json[i].lines[j].trim().includes(str)) {
-            present = true
-            console.log(json[i].start)
+      const subtitleElement = document.getElementById('subtitle-data');
+      const subtitle = JSON.parse(subtitleElement.textContent);
+      const input = document.getElementById("exampleInputEmail1");
+      const str = input.value.toUpperCase().trim();
+      let present = false;
+      const placeHolder = document.getElementById("value");
+      placeHolder.innerHTML = ""
+      for (let i = 0; i < subtitle.length; i++) {
+        for (let j = 0; j < subtitle[i].lines.length; j++) {
+          if (subtitle[i].lines[j].trim().toUpperCase().includes(str)) {
+            present = true;
+            para = document.createElement("p")
+            para.innerText = subtitle[i].start 
+            placeHolder.appendChild(para)
           }
         }
       }
-      if (present === false) {
-        console.log("not found")
+
+      if (!present) {
+            para = document.createElement("p")
+            para.innerText= "Not found in video"
+            placeHolder.appendChild(para)
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
- </script>
 
+  document.getElementById("searchForm").addEventListener("submit", doSomething);
+  </script>
 </html>

@@ -9,6 +9,7 @@
     {% bootstrap_javascript %}
   </head>
   <body>
+
     <div class="container">
       <nav class="navbar navbar-expand-lg bg-body-tertiary">
         <div class="container-fluid">
@@ -25,12 +26,13 @@
           </div>
         </div>
       </nav>
-      <form action="/exists" method="post">
+
+      <form action="/video" method="post" action="/video" method="post" enctype="multipart/form-data">
         {% csrf_token %}
         {{ form }} 
         <div class="mb-3">
           <label for="exampleInputEmail1" class="form-label">Search a video</label>
-          <input type="text" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="search">
+          <input type="file" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" name="video">
         </div>
         <button type="submit" class="btn btn-primary">Submit</button>
       </form>
