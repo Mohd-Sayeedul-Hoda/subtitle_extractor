@@ -63,7 +63,7 @@ def upload_video(request):
         upload_to_s3("temp/" + video_name)
         upload_to_s3("subtitles/" + video_name + ".vtt")
         remove_file(video_name)
-        return render(request, "video.html")
+        return search_dynamodb(request, video_name)
     return response_error(request, "Only method post allow at this url")
 
 
@@ -75,34 +75,38 @@ def search_video_view(request):
 def check_video_exists(request):
     if request.method == "POST":
         video_name = request.POST.get("search")
-        access_key = os.getenv("access_key")
-        secret_access_key = os.getenv("secret_access_key")
-        session = boto3.Session(
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_access_key,
-            region_name="ap-south-1",
-        )
-        dynamodb = session.resource("dynamodb")
-        table = dynamodb.Table("djago-local")
+        return search_dynamodb(request, video_name)
+    return response_error(request, "Post method only allow")
 
-        try:
-            response = table.query(
-                KeyConditionExpression=Key("videoName").eq(video_name)
-            )
-            result = response["Items"]
-            print(result)
 
-            if len(result) != 0:
-                print(f"Video '{result.videoName}' exists.")
-                return True
-            else:
-                print(f"Video '{result.videoName}' does not exist.")
-                return False
+def search_dynamodb(request, video_name):
+    session = boto3.Session(
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION,
+    )
+    dynamodb = session.resource("dynamodb")
+    table = dynamodb.Table("djago-local")
 
-        except Exception as e:
-            print("Error querying item:", str(e))
-            return False
-    return render(request, "search.html")
+    try:
+        response = table.query(KeyConditionExpression=Key("videoName").eq(video_name))
+        result = response.get("Items", [])[0]
+        print(result)
+        if response.get("Count", 0) != 0:
+            print(f"Video '{result.get("videoName", [])}' exists.")
+            value = {
+                "s3_video": s3_url("temp/" + video_name),
+                "s3_subtitle": s3_url("subtitles/" + video_name),
+                "subtitle": result.get("subtitles", []),
+            }
+            return render(request, "video.html", value)
+        else:
+            print(f"Video '{result.videoName}' does not exist.")
+            return response_error(request, "Video does not exists")
+
+    except Exception as e:
+        print("Error querying item:", str(e))
+        return response_error(request, "Internal server Error")
 
 
 def response_error(request, error_str):
@@ -149,10 +153,9 @@ def upload_to_s3(name):
     print("connect to s3")
     result = s3_client.Bucket(AWS_STORAGE_BUCKET_NAME).upload_file(name, name)
     print("upload done")
-    return search_s3(name)
 
 
-def search_s3(video_name):
+def s3_url(video_name):
     pre_signed_url_video = (
         f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_REGION}.amazonaws.com/{video_name}"
     )
@@ -164,7 +167,7 @@ def remove_file(video_name):
         os.remove("temp/" + video_name)
     if os.path.isfile("subtitles/" + video_name + ".vtt"):
         os.remove("subtitles/" + video_name + ".vtt")
-    if os.path.isfile("temp/" + video_name + ".json"):
-        os.remove("temp/" + video_name + ".json")
-    if os.path.isfile("temp/" + video_name + ".srt"):
-        os.remove("temp/" + video_name + ".srt")
+    if os.path.isfile("subtitles/" + video_name + ".json"):
+        os.remove("subtitles/" + video_name + ".json")
+    if os.path.isfile("subtitles/" + video_name + ".srt"):
+        os.remove("subtitles/" + video_name + ".srt")
