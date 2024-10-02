@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "bootstrap5",
+    "django_bootstrap_icons",
     "storages",
     "video",
 ]
